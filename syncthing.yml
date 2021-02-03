@@ -1,0 +1,65 @@
+version: "3.9"
+services:
+  app:
+    image: syncthing/syncthing
+    hostname: "{{.Node.Hostname}}"
+    deploy:
+      mode: global
+    ports:
+      - target: 8384
+        published: 8384
+        protocol: tcp
+        mode: host
+      - target: 22000
+        published: 22000
+        protocol: tcp
+        mode: host
+      - target: 21027
+        published: 21027
+        protocol: udp
+        mode: host
+    configs:
+      - source: syncthing_apikey
+        target: /configs/apikey
+        mode: 0444
+      - source: app_entrypoint
+        target: /bin/entrypoint.sh
+        mode: 0755
+    volumes:
+      - /srv/syncthing:/var/syncthing
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+  manager:
+    image: everpeace/curl-jq
+    entrypoint: /bin/entrypoint.sh
+    environment:
+      SERVICE_NAME: "{{.Service.Name}}"
+    configs:
+      - source: syncthing_user
+        target: /configs/user
+        mode: 0444
+      - source: syncthing_password
+        target: /configs/password
+        mode: 0444
+      - source: syncthing_apikey
+        target: /configs/apikey
+        mode: 0444
+      - source: manager_entrypoint
+        target: /bin/entrypoint.sh
+        mode: 0755
+configs:
+  syncthing_user:
+    external: true
+  syncthing_password:
+    external: true
+  syncthing_apikey:
+    external: true
+  app_entrypoint:
+    file: ./app_entrypoint.sh
+  manager_entrypoint:
+    file: ./manager_entrypoint.sh
+networks:
+  default:
+    driver: overlay
+    driver_opts:
+      encrypted: "true"
